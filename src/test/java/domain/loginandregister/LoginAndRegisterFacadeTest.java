@@ -1,98 +1,52 @@
 package domain.loginandregister;
 
+import domain.loginandregister.dto.RegisterUserDto;
+import domain.loginandregister.dto.RegistratrionResultDto;
 import domain.loginandregister.dto.UserDto;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LoginAndRegisterFacadeTest {
 
     private final RegisterRepository registerRepository = new RegisterRepositoryTestImpl();
+    private final LoginAndRegisterFacade loginAndRegisterFacade = new LoginAndRegisterConfiguration().createForTest(registerRepository);
     @Test
     public void should_register_user() {
         //given
-        String id = UUID.randomUUID().toString();
-        String id2 = UUID.randomUUID().toString();
-        User user = User.builder()
-                .username("username")
-                .password("password")
-                .id(id)
-                .build();
-        User user1 = User.builder()
-                .username("username1")
-                .password("password1")
-                .id(id2)
-                .build();
-        LoginAndRegisterFacade loginAndRegisterFacade = new LoginAndRegisterConfiguration().createForTest(registerRepository);
-        loginAndRegisterFacade.register(user);
-        loginAndRegisterFacade.register(user1);
+        RegisterUserDto registerUserDto = new RegisterUserDto("username", "password");
         //when
-        User findUser = loginAndRegisterFacade.findByUserName("username");
+        RegistratrionResultDto register = loginAndRegisterFacade.register(registerUserDto);
         //then
-        User expectedUser = User.builder()
-                .username("username")
-                .password("password")
-                .id(id)
-                .build();
-        assertThat(findUser).isEqualTo(expectedUser);
-
+        assertAll(
+                () -> assertThat(register.isCreated()).isTrue(),
+                () -> assertThat(register.username()).isEqualTo("username")
+        );
     }
     @Test
     public void should_find_user_by_username() {
         //given
-        String id = UUID.randomUUID().toString();
-        String id2 = UUID.randomUUID().toString();
-        User user = User.builder()
-                .username("username")
-                .password("password")
-                .id(id)
-                .build();
-        User user1 = User.builder()
-                .username("username1")
-                .password("password1")
-                .id(id2)
-                .build();
-        LoginAndRegisterFacade loginAndRegisterFacade = new LoginAndRegisterConfiguration().createForTest(registerRepository);
-        loginAndRegisterFacade.register(user);
-        loginAndRegisterFacade.register(user1);
+        RegisterUserDto registerUserDto = new RegisterUserDto("username", "password");
+        RegistratrionResultDto register = loginAndRegisterFacade.register(registerUserDto);
         //when
-        User findUser = loginAndRegisterFacade.findByUserName("username");
+        UserDto findedUser = loginAndRegisterFacade.findByUserName(register.username());
         //then
-        User expectedUser = User.builder()
-                .username("username")
-                .password("password")
-                .id(id)
-                .build();
-        assertThat(findUser).isEqualTo(expectedUser);
+        assertThat(findedUser).isEqualTo(new UserDto(register.id(), "username", "password"));
     }
     @Test
     public void should_throw_exception_when_user_not_found() {
         //given
-        String id = UUID.randomUUID().toString();
-        String id2 = UUID.randomUUID().toString();
-        User user = User.builder()
-                .username("username")
-                .password("password")
-                .id(id)
-                .build();
-        User user1 = User.builder()
-                .username("username1")
-                .password("password1")
-                .id(id2)
-                .build();
-        LoginAndRegisterFacade loginAndRegisterFacade = new LoginAndRegisterConfiguration().createForTest(registerRepository);
-        loginAndRegisterFacade.register(user);
-        loginAndRegisterFacade.register(user1);
+        String username = "someUser";
+
         //when
+        Throwable thrown = catchThrowable(() -> loginAndRegisterFacade.findByUserName(username));
         //then
-        assertThrows(RuntimeException.class, () -> loginAndRegisterFacade.findByUserName("wrong"), "not found");
+        AssertionsForClassTypes.assertThat(thrown)
+                .isInstanceOf(UsernameNotFoundException.class)
+                .hasMessage("User not found");
     }
 
 }
